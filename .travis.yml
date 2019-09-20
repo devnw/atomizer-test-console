@@ -1,0 +1,4 @@
+language: go
+
+notifications:
+  slack: uis-computerscience:WkbOOfv4FkpfUAs7UgxJPtx9
