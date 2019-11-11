@@ -10,7 +10,3 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 )
-
-replace github.com/benjivesterby/alog => ../alog
-
-replace github.com/benjivesterby/atomizer => ../atomizer
