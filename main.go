@@ -5,8 +5,8 @@ import (
 	"flag"
 	"math/rand"
 
-	"github.com/benjivesterby/alog"
-	"github.com/benjivesterby/atomizer"
+	"github.com/devnw/alog"
+	"github.com/devnw/atomizer"
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 
@@ -51,10 +51,10 @@ func gen(conn *amqp.Connection, iqueue, rqueue string) {
 
 				if e, err = json.Marshal(&epay{rand.Int()}); err == nil {
 
-					electron := &atomizer.ElectronBase{
-						ElectronID: uuid.New().String(),
-						AtomID:     "montecarlo",
-						Load:       e,
+					electron := atomizer.Electron{
+						ID:      uuid.New().String(),
+						AtomID:  "montecarlo",
+						Payload: e,
 					}
 
 					if e, err = json.Marshal(electron); err == nil {
@@ -70,7 +70,7 @@ func gen(conn *amqp.Connection, iqueue, rqueue string) {
 							}); err == nil {
 							alog.Printf("Sent Electron [%s] for processing\n", string(e))
 
-							go rec(conn, rqueue, electron.ElectronID)
+							go rec(conn, rqueue, electron.ID)
 						} else {
 							panic(err)
 						}
