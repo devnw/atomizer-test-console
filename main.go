@@ -1,165 +1,113 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"encoding/json"
 	"flag"
-	"math/rand"
-
-	"github.com/devnw/alog"
-	"github.com/devnw/atomizer"
-	"github.com/google/uuid"
-	"github.com/streadway/amqp"
+	"fmt"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/devnw/alog"
+	"github.com/devnw/amqp"
+	"github.com/devnw/atomizer"
+	"github.com/devnw/montecarlopi"
+	"github.com/google/uuid"
 )
 
 func main() {
 	c := flag.String("conn", "amqp://guest:guest@localhost:5672/", "connection string used for rabbit mq")
-	e := flag.String("exch", "atomizer", "exchange used for passing messages")
-	r := flag.String("results", "electrons", "exchange for listening for electron results")
+	q := flag.String("queue", "atomizer", "queue is the queue for atom messages to be passed across in the message queue")
 
 	flag.Parse()
-	if conn, err := amqp.Dial(*c); err == nil {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	go sigterm(ctx, cancel, sigs)
 
-		gen(conn, *e, *r)
+	// Create the amqp conductor for the agent
+	conductor, err := amqp.Connect(ctx, *c, *q)
+	if err != nil || conductor == nil {
+		fmt.Println("error while initializing amqp | " + err.Error())
+		os.Exit(1)
 	}
 
+	reader := bufio.NewReader(os.Stdin)
+
+	// TODO: read in tosses here
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			fmt.Printf("Enter Tosses: ")
+
+			text, _ := reader.ReadString('\n')
+			text = strings.Replace(text, "\n", "", -1)
+
+			v, err := strconv.Atoi(text)
+			if err != nil || v < 1 {
+				fmt.Println("Invalid number")
+				continue
+			}
+
+			e, err := electron(v)
+			if err != nil {
+				panic(err)
+			}
+
+			spew.Dump(e)
+			p, err := conductor.Send(ctx, e)
+			if err != nil {
+				panic(err)
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case res, ok := <-p:
+				if !ok {
+					continue
+				}
+
+				spew.Dump(res)
+			}
+		}
+	}
 }
 
 type epay struct {
 	Tosses int `json:"tosses"`
 }
 
-func gen(conn *amqp.Connection, iqueue, rqueue string) {
-	var err error
-	var channel *amqp.Channel
-	// Create the inbound processing exchanges and queues
-	if channel, err = conn.Channel(); err == nil {
-
-		if _, err = channel.QueueDeclare(
-			iqueue, // name
-			true,   // durable
-			false,  // delete when unused
-			false,  // exclusive
-			false,  // no-wait
-			nil,    // arguments
-		); err == nil {
-
-			for {
-				var e []byte
-				var err error
-
-				if e, err = json.Marshal(&epay{rand.Int()}); err == nil {
-
-					electron := atomizer.Electron{
-						ID:      uuid.New().String(),
-						AtomID:  "montecarlo",
-						Payload: e,
-					}
-
-					if e, err = json.Marshal(electron); err == nil {
-						if err = channel.Publish(
-							"",     // exchange
-							iqueue, // routing key
-							false,  // mandatory
-							false,  // immediate
-							amqp.Publishing{
-								DeliveryMode: amqp.Persistent,
-								ContentType:  "application/json",
-								Body:         e, //Send the electron's properties
-							}); err == nil {
-							alog.Printf("Sent Electron [%s] for processing\n", string(e))
-
-							go rec(conn, rqueue, electron.ID)
-						} else {
-							panic(err)
-						}
-					} else {
-						panic(err)
-					}
-				} else {
-					panic(err)
-				}
-
-				//time.Sleep(time.Millisecond * 500)
-			}
-		} else {
-			panic(err)
-		}
-	} else {
-		panic(err)
+func electron(tosses int) (atomizer.Electron, error) {
+	e, err := json.Marshal(epay{tosses})
+	if err != nil {
+		return atomizer.Electron{}, err
 	}
+
+	electron := atomizer.Electron{
+		ID:      uuid.New().String(),
+		AtomID:  atomizer.ID(montecarlopi.MonteCarlo{}),
+		Payload: e,
+	}
+
+	return electron, nil
 }
 
-func rec(conn *amqp.Connection, rqueue, eid string) {
-	var err error
-	var channel *amqp.Channel
-	if channel, err = conn.Channel(); err == nil {
+// Setup interrupt monitoring for the agent
+func sigterm(ctx context.Context, cancel context.CancelFunc, sigs chan os.Signal) {
+	defer cancel()
 
-		var queue amqp.Queue
-		if queue, err = channel.QueueDeclare(
-			uuid.New().String(), // name
-			false,               // durable
-			false,               // delete when unused
-			true,                // exclusive
-			false,               // no-wait
-			nil,                 // arguments
-		); err == nil {
-
-			if err = channel.ExchangeDeclare(
-				rqueue,  // name
-				"topic", // type
-				true,    // durable
-				false,   // auto-deleted
-				false,   // internal
-				false,   // no-wait
-				nil,     // arguments
-
-			); err == nil {
-
-				if err = channel.QueueBind(
-					queue.Name,
-					eid,
-					rqueue,
-					false, //noWait -- TODO: see would this argument does
-					nil,   //args
-				); err == nil {
-					var in <-chan amqp.Delivery
-					var out = make(chan []byte)
-
-					if in, err = channel.Consume(
-
-						queue.Name, //Queue
-						"",         // consumer
-						true,       // auto ack
-						false,      // exclusive
-						false,      // no local
-						false,      // no wait
-						nil,        // args
-					); err == nil {
-						select {
-						case msg, ok := <-in:
-							if ok {
-								alog.Print(spew.Sdump(msg.Body))
-							} else {
-								return
-							}
-						}
-					} else {
-						close(out)
-						// TODO: Handle error / panic
-						panic(err)
-					}
-				} else {
-					panic(err)
-				}
-			} else {
-				panic(err)
-			}
-		} else {
-			panic(err)
-		}
-	} else {
-		panic(err)
+	select {
+	case <-ctx.Done():
+		return
+	case <-sigs:
+		alog.Println("Closing Atomizer Agent")
 	}
 }
