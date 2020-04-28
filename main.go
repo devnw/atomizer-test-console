@@ -11,14 +11,25 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/devnw/alog"
 	"github.com/devnw/amqp"
 	"github.com/devnw/atomizer"
 	"github.com/devnw/montecarlopi"
 	"github.com/google/uuid"
 )
+
+type output struct {
+	In     int     `json:"in"`
+	Tosses int     `json:"tosses"`
+	Errors int     `json:"errors"`
+	PI     float64 `json:"pi"`
+}
+
+type empty struct{}
+
+func (empty) Write(p []byte) (int, error) { return 0, nil }
 
 func main() {
 	c := flag.String("conn", "amqp://guest:guest@localhost:5672/", "connection string used for rabbit mq")
@@ -36,6 +47,14 @@ func main() {
 		fmt.Println("error while initializing amqp | " + err.Error())
 		os.Exit(1)
 	}
+
+	d := alog.Destination{
+		Types:  0,
+		Format: 0,
+		Writer: empty{},
+	}
+
+	_ = alog.Global(ctx, "", time.RFC1123, time.UTC, 0, d)
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -61,7 +80,6 @@ func main() {
 				panic(err)
 			}
 
-			spew.Dump(e)
 			p, err := conductor.Send(ctx, e)
 			if err != nil {
 				panic(err)
@@ -75,7 +93,13 @@ func main() {
 					continue
 				}
 
-				spew.Dump(res)
+				o := output{}
+				err := json.Unmarshal(res.Result, &o)
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+
+				fmt.Printf("Pi Estimation: %v\n", o.PI)
 			}
 		}
 	}
@@ -108,6 +132,6 @@ func sigterm(ctx context.Context, cancel context.CancelFunc, sigs chan os.Signal
 	case <-ctx.Done():
 		return
 	case <-sigs:
-		alog.Println("Closing Atomizer Agent")
+		os.Exit(1)
 	}
 }
