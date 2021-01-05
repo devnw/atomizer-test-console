@@ -7,5 +7,5 @@ require (
 	github.com/devnw/amqp v1.0.3
 	github.com/devnw/atomizer v1.0.0
 	github.com/devnw/montecarlopi v0.0.0-20200510191238-2b0899462d9d
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.1.4
 )
