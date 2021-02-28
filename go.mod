@@ -1,11 +1,11 @@
-module github.com/devnw/atomizer-test-console
+module atomizer.io/test-console
 
-go 1.13
+go 1.16
 
 require (
-	github.com/devnw/alog v1.0.2
-	github.com/devnw/amqp v1.0.3
-	github.com/devnw/atomizer v1.0.0
-	github.com/devnw/montecarlopi v0.0.0-20200510191238-2b0899462d9d
-	github.com/google/uuid v1.1.2
+	atomizer.io/amqp v1.0.4
+	atomizer.io/engine v1.0.2
+	atomizer.io/montecarlopi v0.0.0-20210228151111-b463b6e93c16
+	devnw.com/alog v1.0.3
+	github.com/google/uuid v1.2.0
 )

@@ -18,10 +18,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devnw/alog"
-	"github.com/devnw/amqp"
-	"github.com/devnw/atomizer"
-	"github.com/devnw/montecarlopi"
+	"atomizer.io/amqp"
+	"atomizer.io/engine"
+	"atomizer.io/montecarlopi"
+	"devnw.com/alog"
 	"github.com/google/uuid"
 )
 
@@ -114,15 +114,15 @@ type epay struct {
 	Tosses int `json:"tosses"`
 }
 
-func electron(tosses int) (atomizer.Electron, error) {
+func electron(tosses int) (engine.Electron, error) {
 	e, err := json.Marshal(epay{tosses})
 	if err != nil {
-		return atomizer.Electron{}, err
+		return engine.Electron{}, err
 	}
 
-	electron := atomizer.Electron{
+	electron := engine.Electron{
 		ID:      uuid.New().String(),
-		AtomID:  atomizer.ID(montecarlopi.MonteCarlo{}),
+		AtomID:  engine.ID(montecarlopi.MonteCarlo{}),
 		Payload: e,
 	}
 
