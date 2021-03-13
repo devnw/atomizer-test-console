@@ -72,11 +72,12 @@ func main() {
 			fmt.Printf("Enter Tosses: ")
 
 			text, _ := reader.ReadString('\n')
+			text = strings.Replace(text, "\r", "", -1)
 			text = strings.Replace(text, "\n", "", -1)
 
 			v, err := strconv.Atoi(text)
 			if err != nil || v < 1 {
-				fmt.Println("Invalid number")
+				fmt.Printf("Invalid number [%s]\n", text)
 				continue
 			}
 
@@ -110,17 +111,17 @@ func main() {
 	}
 }
 
-type epay struct {
+type tosspayload struct {
 	Tosses int `json:"tosses"`
 }
 
-func electron(tosses int) (engine.Electron, error) {
-	e, err := json.Marshal(epay{tosses})
+func electron(tosses int) (*engine.Electron, error) {
+	e, err := json.Marshal(tosspayload{tosses})
 	if err != nil {
-		return engine.Electron{}, err
+		return &engine.Electron{}, err
 	}
 
-	electron := engine.Electron{
+	electron := &engine.Electron{
 		ID:      uuid.New().String(),
 		AtomID:  engine.ID(montecarlopi.MonteCarlo{}),
 		Payload: e,
@@ -131,12 +132,12 @@ func electron(tosses int) (engine.Electron, error) {
 
 // Setup interrupt monitoring for the agent
 func sigterm(ctx context.Context, cancel context.CancelFunc, sigs chan os.Signal) {
-	defer cancel()
-
 	select {
 	case <-ctx.Done():
+		cancel()
 		return
 	case <-sigs:
+		cancel()
 		os.Exit(1)
 	}
 }
