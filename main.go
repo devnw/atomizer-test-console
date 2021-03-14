@@ -30,10 +30,6 @@ type output struct {
 	PI     float64 `json:"pi"`
 }
 
-type empty struct{}
-
-func (empty) Write(p []byte) (int, error) { return 0, nil }
-
 func main() {
 	c := flag.String("conn", "amqp://guest:guest@localhost:5672/", "connection string used for rabbit mq")
 	q := flag.String("queue", "atomizer", "queue is the queue for atom messages to be passed across in the message queue")
