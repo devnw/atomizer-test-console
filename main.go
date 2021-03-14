@@ -16,12 +16,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"atomizer.io/amqp"
 	"atomizer.io/engine"
 	"atomizer.io/montecarlopi"
-	"devnw.com/alog"
 	"github.com/google/uuid"
 )
 
@@ -52,14 +50,6 @@ func main() {
 		fmt.Println("error while initializing amqp | " + err.Error())
 		os.Exit(1)
 	}
-
-	d := alog.Destination{
-		Types:  0,
-		Format: 0,
-		Writer: empty{},
-	}
-
-	_ = alog.Global(ctx, "", time.RFC1123, time.UTC, 0, d)
 
 	reader := bufio.NewReader(os.Stdin)
 
