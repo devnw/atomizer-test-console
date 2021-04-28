@@ -1,0 +1,23 @@
+version: 2
+updates:
+- package-ecosystem: gomod
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "10:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: atomizer.io/amqp
+    versions:
+    - 1.0.5
+    - 1.0.6
+  - dependency-name: devnw.com/alog
+    versions:
+    - 1.0.5
+    - 1.0.6
+  - dependency-name: atomizer.io/engine
+    versions:
+    - 1.0.3
+  - dependency-name: github.com/google/uuid
+    versions:
+    - 1.2.0
