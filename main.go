@@ -17,10 +17,10 @@ import (
 	"strings"
 	"syscall"
 
-	"atomizer.io/amqp"
-	"atomizer.io/engine"
-	"atomizer.io/montecarlopi"
 	"github.com/google/uuid"
+	"go.atomizer.io/amqp"
+	"go.atomizer.io/engine"
+	"go.atomizer.io/montecarlopi"
 )
 
 type output struct {
