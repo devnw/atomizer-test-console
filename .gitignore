@@ -1,6 +1,8 @@
 # Removing Vendor
 vendor/
 
+.vscode/
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -13,5 +15,12 @@ vendor/
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+coverage.html
 
-test-console
+# ignore keyfiles
+*.crt
+*.key
+*.pem
+
+# ignore mac files
+.DS_Store
